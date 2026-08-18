@@ -159,8 +159,9 @@ function genChunk() {
     const sw = Math.min(w - 80, 120 + R() * (120 + d * 140));
     const sx = x + (w - sw) / 2;
     S(sx, sw);
+    if (R() < 0.8) T(x + 40, 470);
     T(sx + sw / 2, 432);
-    if (R() < 0.8) { T(x + 40, 470); T(x + w - 40, 470); }
+    if (R() < 0.8) T(x + w - 40, 470);
     x += w;
   } else if (roll < 0.62) {
     // 断崖 + 画的桥（正片过）
@@ -260,6 +261,12 @@ window.addEventListener('keydown', e => {
   ac();
   if (g.state === 'menu' && (e.code === 'Enter' || e.code === 'Space')) { startGame(); return; }
   if (g.state === 'end' && e.code === 'Enter') { resetRun(); return; }
+  if (e.code === 'KeyP' || e.code === 'Escape') {
+    if (g.state === 'play') g.state = 'pause';
+    else if (g.state === 'pause') g.state = 'play';
+    return;
+  }
+  if (e.code === 'KeyR' && (g.state === 'play' || g.state === 'pause' || g.state === 'end')) { resetRun(); return; }
   if (g.state !== 'play') return;
   if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') pl.jbuf = 0.12;
   if (e.code === 'KeyX' || e.code === 'KeyJ' || e.code === 'ShiftLeft' || e.code === 'ShiftRight') switchMode();
@@ -401,6 +408,7 @@ function collectTicket(t) {
 }
 
 function update(dt) {
+  if (g.state === 'pause') return;
   g.time += dt;
   if (g.switchCd > 0) g.switchCd -= dt;
   if (trans.t > 0) trans.t -= dt * 3.5;
@@ -517,9 +525,11 @@ function update(dt) {
     }
   }
 
-  // --- 字幕触发 ---
-  for (const s of subs) {
-    if (!s.shown && pl.x > s.x) { s.shown = true; g.sub = { line: s.line, t: 3.4 }; }
+  // --- 字幕触发（只在正片里棒读，海报里路过不消耗） ---
+  if (g.mode === 'film') {
+    let fired = null;
+    for (const s of subs) if (!s.shown && pl.x > s.x) { s.shown = true; fired = s; }
+    if (fired) g.sub = { line: fired.line, t: 3.4 };
   }
 
   // --- 云雀 ---
@@ -607,10 +617,14 @@ function fillEndScreen() {
       `排片 <b>${endless.sceneCount} 场</b>（历史最佳 ${best} 场）· 存活 ${mm} 分 ${String(ss).padStart(2, '0')} 秒<br>` +
       `观众 <b>${audience} 位</b>，排片多了，观众真的来了`;
   } else {
+    const prevBest = parseFloat(localStorage.getItem('nl_best_time') || '0');
+    if (!prevBest || g.runTime < prevBest) localStorage.setItem('nl_best_time', g.runTime.toFixed(1));
+    const bt = parseFloat(localStorage.getItem('nl_best_time'));
+    const bm = Math.floor(bt / 60), bs = Math.floor(bt % 60);
     document.getElementById('endstats').innerHTML =
       `本场票房 <b>¥${g.box.toFixed(1)}</b>（票根 ${g.ticketsGot}/${tickets.length} 张）<br>` +
       `观影人数 <b>${audience} 位</b>（1 位是你，其余 ${Math.max(0, audience - 1)} 位是没跑到结局的你）<br>` +
-      `放映时长 ${mm} 分 ${String(ss).padStart(2, '0')} 秒`;
+      `放映时长 ${mm} 分 ${String(ss).padStart(2, '0')} 秒（最快 ${bm} 分 ${String(bs).padStart(2, '0')} 秒）`;
   }
 
   // 累计进度条：7705 → 百万 → 千万，一路对着《牛来》的真实逆袭线
@@ -707,6 +721,16 @@ function render() {
   drawSubtitle();
   drawToast();
   drawTransition();
+  drawPause();
+}
+function drawPause() {
+  if (g.state !== 'pause') return;
+  ctx.fillStyle = 'rgba(16,14,12,0.55)'; ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = PAPER; ctx.textAlign = 'center';
+  ctx.font = '26px "Kaiti SC","STKaiti",serif';
+  ctx.fillText('暂 停 中', W / 2, H / 2 - 8);
+  ctx.font = '14px "Kaiti SC","STKaiti",serif';
+  ctx.fillText('按 P 或 Esc 继续 · R 重开', W / 2, H / 2 + 22);
 }
 function drawToast() {
   if (!g.toast) return;
@@ -1251,6 +1275,32 @@ function drawTransition() {
   ctx.fillRect(0, 0, W, H);
   ctx.restore();
 }
+
+// ---------------- 触屏（手机屏上按键） ----------------
+(function initTouch() {
+  const isTouch = window.matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window;
+  if (!isTouch) return;
+  document.getElementById('touch').style.display = 'block';
+  const hold = (id, code) => {
+    const el = document.getElementById(id);
+    const on = e => { e.preventDefault(); ac(); keys[code] = true; };
+    const off = e => { e.preventDefault(); keys[code] = false; };
+    el.addEventListener('pointerdown', on);
+    el.addEventListener('pointerup', off);
+    el.addEventListener('pointercancel', off);
+    el.addEventListener('pointerleave', off);
+  };
+  hold('tleft', 'ArrowLeft');
+  hold('tright', 'ArrowRight');
+  document.getElementById('tjump').addEventListener('pointerdown', e => {
+    e.preventDefault(); ac();
+    if (g.state === 'play') pl.jbuf = 0.12;
+  });
+  document.getElementById('tswitch').addEventListener('pointerdown', e => {
+    e.preventDefault(); ac();
+    switchMode();
+  });
+})();
 
 // ---------------- 主循环 ----------------
 let last = performance.now();
