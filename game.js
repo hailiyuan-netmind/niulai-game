@@ -663,21 +663,20 @@ function renderFilmBG() {
     ctx.fillRect(cx, 60 + k * 46, 92, 16); ctx.fillRect(cx + 18, 48 + k * 46, 54, 14);
   }
 }
-function box3(x, y, w, h, base, top, side, seed) {
+function box3(x, y, w, h, base, top, side) {
   const dx = 7, dy = 6;
-  const flick = ((g.time * 1.9 + seed * 7) % 5) < 0.07;
   ctx.fillStyle = top;
   ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + dx, y - dy); ctx.lineTo(x + w + dx, y - dy); ctx.lineTo(x + w, y); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = '#26282b'; ctx.lineWidth = 1; ctx.stroke();
-  ctx.fillStyle = flick ? '#ff00ff' : side;  // 经典丢贴图洋红
+  ctx.fillStyle = side;
   ctx.beginPath(); ctx.moveTo(x + w, y); ctx.lineTo(x + w + dx, y - dy); ctx.lineTo(x + w + dx, y + h - dy); ctx.lineTo(x + w, y + h); ctx.closePath(); ctx.fill();
   ctx.stroke();
   ctx.fillStyle = base; ctx.fillRect(x, y, w, h);
   ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
 }
 function drawPlatFilm(p) {
-  if (p.solid === 'film') box3(p.x, p.y, p.w, p.h, '#cdbfa8', '#e0d4bd', '#a8997f', p.seed);
-  else box3(p.x, p.y, p.w, p.h, '#9aa0a6', '#b4bac0', '#7c8288', p.seed);
+  if (p.solid === 'film') box3(p.x, p.y, p.w, p.h, '#cdbfa8', '#e0d4bd', '#a8997f');
+  else box3(p.x, p.y, p.w, p.h, '#9aa0a6', '#b4bac0', '#7c8288');
 }
 function drawSpikeFilm(s) {
   for (let x = 0; x + 16 <= s.w + 2; x += 16) {
@@ -789,7 +788,7 @@ function drawGoal() {
     ctx.globalAlpha = glow; ctx.fillStyle = '#e8a63a';
     ctx.beginPath(); ctx.arc(q.x + q.w / 2, q.y + q.h / 2 + 10, 52, 0, 7); ctx.fill();
   } else {
-    box3(q.x - 10, q.y - 20, q.w + 20, q.h + 20, '#b0a794', '#c9c0ad', '#8e8674', 99);
+    box3(q.x - 10, q.y - 20, q.w + 20, q.h + 20, '#b0a794', '#c9c0ad', '#8e8674');
     ctx.fillStyle = '#f5f5ef';
     ctx.fillRect(q.x, q.y - 8, q.w, 26);
     ctx.strokeStyle = '#26282b'; ctx.strokeRect(q.x + 0.5, q.y - 7.5, q.w - 1, 25);
