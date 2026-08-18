@@ -77,6 +77,8 @@
     border: none; border-radius: 4px; cursor: pointer;
   }
   .startbtn:hover, .endbtn:hover { background: #c8402a; }
+  .startbtn.alt { background: #6b6254; font-size: 15px; letter-spacing: 2px; padding: 10px 20px; margin-left: 10px; }
+  .endbtn.alt { background: #6b6254; font-size: 15px; letter-spacing: 2px; padding: 8px 18px; margin-left: 10px; }
   .credit { margin-top: 16px; font-size: 11px; color: #a89b82; }
 
   /* ---------- 散场结算 ---------- */
@@ -132,8 +134,11 @@
         海报世界身轻如纸，可以飘过深渊与尖刺，但画上去的东西踩不实；<br>
         正片世界一切粗糙但真实，票根也只有在正片里才收得进口袋。
       </div>
-      <button class="startbtn" id="startbtn">开 场</button>
-      <div class="credit">目标：凑满 ¥7705 的累计票房 · 粉丝二创 · 非官方 · 非商用</div>
+      <div>
+        <button class="startbtn" id="startbtn">开 场</button>
+        <button class="startbtn alt" id="endlessbtn">无尽 · 排片保卫战</button>
+      </div>
+      <div class="credit">目标：凑满 ¥7705 的累计票房 · 粉丝二创 · 非官方 · 非商用<br>无尽模式：黑幕全程追击，一命到底，排片越多票价越贵</div>
     </div>
   </div>
 
@@ -148,7 +153,7 @@
       <div class="quote" id="q1"></div>
       <div class="quote" id="q2"></div>
       <div class="credit">致敬《牛来》剧组全体两位成员：信雨萌 · 孙丽芳<br>（片尾曲《雨后轻风有香》请自行脑补）</div>
-      <button class="endbtn" id="againbtn">再 来 一 场</button><br>
+      <button class="endbtn" id="againbtn">再 来 一 场</button><button class="endbtn alt" id="modeSwapBtn">无 尽 模 式</button><br>
       <button id="resetTotal">清空累计票房</button>
     </div>
   </div>

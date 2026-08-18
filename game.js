@@ -53,7 +53,12 @@ const g = {
   cam: 0,
   sub: null,            // 当前字幕 {line,t}
   shakeT: 0,
+  gameMode: 'story',    // story | endless
+  ticketsGot: 0,
+  toast: null,          // 里程碑横幅 {text,t}
 };
+// 无尽模式（排片保卫战）状态
+const endless = { genX: 0, sceneCount: 0, mult: 1, nextSubX: 0, toasted359: false };
 const pl = {
   x: 80, y: 472, w: 30, h: 28, vx: 0, vy: 0,
   onGround: false, face: 1,
@@ -74,38 +79,46 @@ function P(x, y, w, h = 18) { plats.push({ x, y, w, h, solid: 'film', seed: seed
 function S(x, w) { spikes.push({ x, y: 478, w, h: 22 }); }
 function T(x, y) { tickets.push({ x, y, r: 9, got: false, bob: seedCnt++ }); }
 
-// 地面
-G(0, 1400); G(1600, 1200); G(3000, 180); G(4350, 1750); G(6280, 970);
-// 实台阶（两个世界都真实）
-B(600, 440, 90); B(760, 380, 90); B(3620, 315, 380); B(4560, 430, 160);
-// 手搓平台（只在正片里是实的）
-P(1400, 500, 200);            // 第一座"画的桥"
-P(3230, 440, 110); P(3410, 375, 110);
-P(6100, 500, 180);            // 追逐战里的桥
-// 尖刺（只在正片里致命）
-S(1950, 170); S(2350, 240); S(4580, 120); S(4900, 180); S(5800, 130); S(6500, 200);
-// 票根
-[[300,470],[360,470],[420,470],[630,405],[790,345],
- [1450,468],[1510,468],[1570,468],[1700,470],
- [1975,432],[2200,470],[2260,470],[2360,432],
- [3270,405],[3450,340],[3700,280],[3780,280],[3860,280],
- [4420,470],[4620,395],[4700,395],[5150,470],
- [5700,470],[5950,470],[6160,468],[6220,468],[6800,470]].forEach(a => T(a[0], a[1]));
-// 路牌
-[[220,432,'←→ 移动 · 空格 跳'],
- [1290,428,'海报的桥是画的 · 按 X 进正片'],
- [1880,428,'正片的刺是真的 · 切回海报，飘过去'],
- [3080,420,'好看的是假的，难看的才是真的'],
- [3760,268,'云雀只在海报里认路'],
- [5480,428,'跑！排片正在消失！']].forEach(a => signs.push({ x: a[0], y: a[1], text: a[2] }));
-// 存档点
-cps.push({ x: 3060, y: 500, got: false }, { x: 5300, y: 500, got: false });
-// 正片字幕（棒读）
-[[500, '。。。加油。牛来。'],
- [2550, '牛来。你要，学会，勇敢。'],
- [4450, '（此处应有配乐。）'],
- [5750, '生死。就是，跑得快一点。'],
- [6700, '前面。就是，影院。']].forEach(a => subs.push({ x: a[0], line: a[1], shown: false }));
+function clearLevel() {
+  plats.length = 0; spikes.length = 0; tickets.length = 0;
+  signs.length = 0; cps.length = 0; subs.length = 0;
+}
+function buildStory() {
+  clearLevel();
+  // 地面
+  G(0, 1400); G(1600, 1200); G(3000, 180); G(4350, 1750); G(6280, 970);
+  // 实台阶（两个世界都真实）
+  B(600, 440, 90); B(760, 380, 90); B(3620, 315, 380); B(4560, 430, 160);
+  // 手搓平台（只在正片里是实的）
+  P(1400, 500, 200);            // 第一座"画的桥"
+  P(3230, 440, 110); P(3410, 375, 110);
+  P(6100, 500, 180);            // 追逐战里的桥
+  // 尖刺（只在正片里致命）
+  S(1950, 170); S(2350, 240); S(4580, 120); S(4900, 180); S(5800, 130); S(6500, 200);
+  // 票根
+  [[300,470],[360,470],[420,470],[630,405],[790,345],
+   [1450,468],[1510,468],[1570,468],[1700,470],
+   [1975,432],[2200,470],[2260,470],[2360,432],
+   [3270,405],[3450,340],[3700,280],[3780,280],[3860,280],
+   [4420,470],[4620,395],[4700,395],[5150,470],
+   [5700,470],[5950,470],[6160,468],[6220,468],[6800,470]].forEach(a => T(a[0], a[1]));
+  // 路牌
+  [[220,432,'←→ 移动 · 空格 跳'],
+   [1290,428,'海报的桥是画的 · 按 X 进正片'],
+   [1880,428,'正片的刺是真的 · 切回海报，飘过去'],
+   [3080,420,'好看的是假的，难看的才是真的'],
+   [3760,268,'云雀只在海报里认路'],
+   [5480,428,'跑！排片正在消失！']].forEach(a => signs.push({ x: a[0], y: a[1], text: a[2] }));
+  // 存档点
+  cps.push({ x: 3060, y: 500, got: false }, { x: 5300, y: 500, got: false });
+  // 正片字幕（棒读）
+  [[500, '。。。加油。牛来。'],
+   [2550, '牛来。你要，学会，勇敢。'],
+   [4450, '（此处应有配乐。）'],
+   [5750, '生死。就是，跑得快一点。'],
+   [6700, '前面。就是，影院。']].forEach(a => subs.push({ x: a[0], line: a[1], shown: false }));
+}
+buildStory();
 const goal = { x: 6950, y: 380, w: 90, h: 120 };
 const waypoints = [{ x: 3060, y: 450 }, { x: 5300, y: 450 }, { x: 6990, y: 420 }];
 
@@ -120,6 +133,81 @@ const QUOTES = [
   '特效炸裂，裂缝里全是诚意。',
   '从《牛申克的救赎》一路刷到这，二创浓度超标。',
 ];
+const ENDLESS_SUBS = [
+  '。。。跑。牛来。', '排片。不能。消失。', '（观众。正在。入场。）',
+  '牛来。别回头。', '这。就是。生死。', '（此处。仍然。没有。配乐。）',
+];
+
+// ---------------- 无尽模式：程序生成 ----------------
+function genChunk() {
+  const d = Math.min(1, (endless.genX - 1200) / 14000);   // 难度 0→1
+  const R = Math.random;
+  let x = endless.genX;
+  const roll = R();
+  if (roll < 0.18) {
+    // 平地喘息 + 票根
+    const w = 320 + R() * 200;
+    G(x, w);
+    for (let tx = x + 60; tx < x + w - 40; tx += 60) if (R() < 0.7) T(tx, 470);
+    x += w;
+  } else if (roll < 0.42) {
+    // 尖刺阵（海报飘过去）
+    const w = 300 + R() * 260;
+    G(x, w);
+    const sw = Math.min(w - 80, 120 + R() * (120 + d * 140));
+    const sx = x + (w - sw) / 2;
+    S(sx, sw);
+    T(sx + sw / 2, 432);
+    if (R() < 0.8) { T(x + 40, 470); T(x + w - 40, 470); }
+    x += w;
+  } else if (roll < 0.62) {
+    // 断崖 + 画的桥（正片过）
+    const gap = 170 + R() * (60 + d * 90);
+    P(x, 500, gap);
+    for (let tx = x + 30; tx < x + gap - 20; tx += 55) T(tx, 468);
+    const w = 260 + R() * 200;
+    G(x + gap, w);
+    x += gap + w;
+  } else if (roll < 0.78) {
+    // 纯深渊（海报飘）
+    const gap = 240 + R() * (80 + d * 120);
+    const w = 280 + R() * 200;
+    G(x + gap, w);
+    T(x + gap + 50, 470);
+    x += gap + w;
+  } else if (roll < 0.92) {
+    // 台下刺 + 实高台
+    const w = 380 + R() * 180;
+    G(x, w);
+    const bw = 130 + R() * 80;
+    const bx = x + (w - bw) / 2;
+    S(bx + 10, bw - 20);
+    B(bx, 430 - R() * 30, bw);
+    T(bx + bw / 2 - 20, 392); T(bx + bw / 2 + 20, 392);
+    x += w;
+  } else {
+    // 手搓平台连跳（正片）
+    const gap = 300 + R() * 200;
+    let px = x + 40, py = 460;
+    while (px < x + gap - 80) {
+      const pw = 90 + R() * 50;
+      P(px, py, pw);
+      T(px + pw / 2, py - 32);
+      px += pw + 60 + R() * 30;
+      py = 380 + R() * 90;
+    }
+    const w = 260 + R() * 160;
+    G(x + gap, w);
+    x += gap + w;
+  }
+  endless.genX = x;
+}
+function pruneLevel() {
+  const cut = g.cam - 600;
+  while (plats.length && plats[0].x + plats[0].w < cut) plats.shift();
+  while (spikes.length && spikes[0].x + spikes[0].w < cut) spikes.shift();
+  while (tickets.length && tickets[0].x + 30 < cut) tickets.shift();
+}
 
 // ---------------- 工具 ----------------
 function mulberry(a) { return function () { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
@@ -209,29 +297,48 @@ function resolveEmbed() {
 }
 
 // ---------------- 逻辑 ----------------
-function startGame() {
+function hideOverlays() {
   document.getElementById('menu').style.display = 'none';
-  document.getElementById('hud').style.display = 'block';
-  document.getElementById('startbtn').blur();
-  g.state = 'play'; g.runTime = 0;
-  updateHud();
-}
-function resetRun() {
-  tickets.forEach(t => t.got = false);
-  cps.forEach(c => c.got = false);
-  subs.forEach(s => s.shown = false);
-  g.box = 0; g.deaths = 0; g.runTime = 0; g.achievedThisRun = false;
-  g.checkpoint = { x: 80, y: 472 };
-  g.mode = 'poster'; g.sub = null;
-  pl.x = 80; pl.y = 472; pl.vx = 0; pl.vy = 0;
-  wall.active = false; wall.x = wall.startX;
-  bird.state = 'perch'; bird.x = 3660; bird.y = 288;
-  particles = [];
   document.getElementById('endo').style.display = 'none';
-  document.getElementById('againbtn').blur();
+  document.getElementById('hud').style.display = 'block';
+  ['startbtn', 'endlessbtn', 'againbtn', 'modeSwapBtn'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.blur();
+  });
+}
+function resetCommon() {
+  g.box = 0; g.deaths = 0; g.runTime = 0; g.achievedThisRun = false;
+  g.ticketsGot = 0; g.toast = null;
+  g.mode = 'poster'; g.sub = null; g.cam = 0;
+  g.checkpoint = { x: 80, y: 472 };
+  pl.x = 80; pl.y = 472; pl.vx = 0; pl.vy = 0; pl.face = 1;
+  particles = [];
+}
+function startStory() {
+  g.gameMode = 'story';
+  buildStory();
+  resetCommon();
+  wall.active = false; wall.x = wall.startX; wall.speed = 196;
+  bird.state = 'perch'; bird.x = 3660; bird.y = 288;
+  hideOverlays();
   g.state = 'play';
   updateHud();
 }
+function startEndless() {
+  g.gameMode = 'endless';
+  clearLevel();
+  G(0, 1200);
+  T(300, 470); T(360, 470); T(420, 470);
+  endless.genX = 1200; endless.sceneCount = 0; endless.mult = 1;
+  endless.nextSubX = 900; endless.toasted359 = false;
+  resetCommon();
+  wall.active = true; wall.x = -450; wall.speed = 175;
+  bird.state = 'follow'; bird.x = 220; bird.y = 380;
+  hideOverlays();
+  g.state = 'play';
+  updateHud();
+}
+function startGame() { startStory(); }
+function resetRun() { g.gameMode === 'endless' ? startEndless() : startStory(); }
 function die() {
   if (g.state !== 'play') return;
   g.state = 'dead'; g.deadT = 0.7; g.deaths++;
@@ -252,7 +359,12 @@ function respawn() {
 }
 function endGame() {
   g.state = 'end';
-  sfx.goal();
+  if (g.gameMode === 'endless') {
+    const best = parseInt(localStorage.getItem('nl_best_scenes') || '0', 10);
+    if (endless.sceneCount > best) localStorage.setItem('nl_best_scenes', String(endless.sceneCount));
+  } else {
+    sfx.goal();
+  }
   document.getElementById('hud').style.display = 'none';
   fillEndScreen();
   document.getElementById('endo').style.display = 'flex';
@@ -260,16 +372,27 @@ function endGame() {
 
 function collectTicket(t) {
   t.got = true;
-  g.box += TICKET_PRICE;
+  g.ticketsGot++;
+  const val = TICKET_PRICE * (g.gameMode === 'endless' ? endless.mult : 1);
+  g.box += val;
   const before = g.total;
-  g.total += TICKET_PRICE;
+  g.total += val;
   localStorage.setItem('nl_total', g.total.toFixed(1));
   if (before < TARGET && g.total >= TARGET) {
     g.ach = true; g.achievedThisRun = true;
     localStorage.setItem('nl_ach', '1');
+    g.toast = { text: '成就解锁：年度最炸裂（¥7705）', t: 2.8 };
+  }
+  if (before < 1000000 && g.total >= 1000000 && !localStorage.getItem('nl_m1')) {
+    localStorage.setItem('nl_m1', '1');
+    g.toast = { text: '累计票房破百万！', t: 2.8 };
+  }
+  if (before < 10000000 && g.total >= 10000000 && !localStorage.getItem('nl_m2')) {
+    localStorage.setItem('nl_m2', '1');
+    g.toast = { text: '逆袭一千万！牛来封神', t: 3.2 };
   }
   sfx.ticket();
-  particles.push({ type: 'plus', x: t.x, y: t.y - 14, vx: 0, vy: -46, life: 0.9, max: 0.9, txt: '+¥38.5' });
+  particles.push({ type: 'plus', x: t.x, y: t.y - 14, vx: 0, vy: -46, life: 0.9, max: 0.9, txt: '+¥' + val.toFixed(1) });
   for (let i = 0; i < 6; i++) particles.push({ type: 'gold', x: t.x, y: t.y,
     vx: (Math.random() - 0.5) * 160, vy: -Math.random() * 140, life: 0.5, max: 0.5 });
   updateHud();
@@ -281,6 +404,7 @@ function update(dt) {
   if (trans.t > 0) trans.t -= dt * 3.5;
   if (g.shakeT > 0) g.shakeT -= dt;
   if (g.sub) { g.sub.t -= dt; if (g.sub.t <= 0) g.sub = null; }
+  if (g.toast) { g.toast.t -= dt; if (g.toast.t <= 0) g.toast = null; }
 
   particles = particles.filter(p => (p.life -= dt) > 0);
   particles.forEach(p => {
@@ -291,12 +415,36 @@ function update(dt) {
 
   if (g.state === 'dead') {
     g.deadT -= dt;
-    if (g.deadT <= 0) respawn();
+    if (g.deadT <= 0) { if (g.gameMode === 'endless') endGame(); else respawn(); }
     return;
   }
   if (g.state !== 'play') { pl.animT += dt * 0.4; return; }
 
   g.runTime += dt;
+
+  // --- 无尽模式：生成、清理、涨排片、黑幕提速 ---
+  if (g.gameMode === 'endless') {
+    while (endless.genX < pl.x + 1700) genChunk();
+    pruneLevel();
+    wall.speed = Math.min(288, 175 + (pl.x - 80) * 0.008);
+    if (wall.x < pl.x - 900) wall.x = pl.x - 900;
+    const sc = Math.floor(Math.max(0, pl.x - 80) / 100);
+    if (sc > endless.sceneCount) {
+      endless.sceneCount = sc;
+      endless.mult = 1 + Math.floor(sc / 20);
+      if (sc >= 359 && !endless.toasted359) {
+        endless.toasted359 = true;
+        g.toast = { text: '单日排片 359 场！和《牛来》本尊同款逆袭', t: 3 };
+      }
+      updateHud();
+    }
+    if (pl.x > endless.nextSubX) {
+      endless.nextSubX = pl.x + 1100 + Math.random() * 500;
+      const pool = ENDLESS_SUBS.concat(['第 ' + Math.max(1, endless.sceneCount) + ' 场。放映。开始。']);
+      g.sub = { line: pool[Math.floor(Math.random() * pool.length)], t: 3 };
+    }
+  }
+
   const M = g.mode === 'poster' ? POSTER : FILM;
 
   // --- 水平 ---
@@ -325,7 +473,7 @@ function update(dt) {
   // --- 碰撞：分轴 ---
   const S_ = solids();
   pl.x += pl.vx * dt;
-  pl.x = Math.max(0, Math.min(WORLD_W - pl.w, pl.x));
+  pl.x = Math.max(0, g.gameMode === 'story' ? Math.min(WORLD_W - pl.w, pl.x) : pl.x);
   for (const p of S_) if (overlap(pl, p)) {
     if (pl.vx > 0) pl.x = p.x - pl.w; else if (pl.vx < 0) pl.x = p.x + p.w;
     pl.vx = 0;
@@ -387,7 +535,9 @@ function update(dt) {
       bird.sparkT -= dt;
       if (bird.sparkT <= 0) {
         bird.sparkT = 0.09;
-        const wp = waypoints.find(w => w.x > pl.x + 40) || waypoints[waypoints.length - 1];
+        const wp = g.gameMode === 'endless'
+          ? { x: pl.x + 500, y: Math.max(120, pl.y - 60) }
+          : (waypoints.find(w => w.x > pl.x + 40) || waypoints[waypoints.length - 1]);
         const dx = wp.x - bird.x, dy = wp.y - bird.y, len = Math.hypot(dx, dy) || 1;
         particles.push({ type: 'gold', x: bird.x, y: bird.y,
           vx: dx / len * 90 + (Math.random() - 0.5) * 30, vy: dy / len * 90 + (Math.random() - 0.5) * 30,
@@ -397,14 +547,14 @@ function update(dt) {
   }
 
   // --- 追逐战：黑幕（两个世界都吞） ---
-  if (!wall.active && pl.x > wall.triggerX) { wall.active = true; wall.x = wall.startX; g.shakeT = 0.4; }
+  if (g.gameMode === 'story' && !wall.active && pl.x > wall.triggerX) { wall.active = true; wall.x = wall.startX; g.shakeT = 0.4; }
   if (wall.active) {
     wall.x += wall.speed * dt;
     if (pl.x < wall.x - 10) { die(); return; }
   }
 
-  // --- 终点 ---
-  if (overlap(pl, goal)) { endGame(); return; }
+  // --- 终点（仅剧情模式） ---
+  if (g.gameMode === 'story' && overlap(pl, goal)) { endGame(); return; }
 
   // --- 水墨拖尾 ---
   if (g.mode === 'poster' && (Math.abs(pl.vx) > 60 || !pl.onGround)) {
@@ -413,7 +563,7 @@ function update(dt) {
   }
 
   // --- 相机 ---
-  const target = Math.max(0, Math.min(WORLD_W - W, pl.x - W * 0.38));
+  const target = Math.max(0, g.gameMode === 'story' ? Math.min(WORLD_W - W, pl.x - W * 0.38) : pl.x - W * 0.38);
   g.cam += (target - g.cam) * Math.min(1, dt * 8);
 }
 
@@ -421,13 +571,18 @@ function update(dt) {
 const boxEl = document.getElementById('boxoffice');
 const modeEl = document.getElementById('modechip');
 function updateHud() {
-  boxEl.innerHTML = `本场票房 <b>¥${g.box.toFixed(1)}</b>　·　累计 ¥${g.total.toFixed(1)}`;
+  const mult = g.gameMode === 'endless' && endless.mult > 1 ? `（票价 ×${endless.mult}）` : '';
+  const scenes = g.gameMode === 'endless' ? `　·　排片 ${endless.sceneCount} 场` : '';
+  boxEl.innerHTML = `本场票房 <b>¥${g.box.toFixed(1)}</b>${mult}${scenes}　·　累计 ¥${g.total.toFixed(1)}`;
   modeEl.className = 'chip ' + g.mode;
   modeEl.innerHTML = (g.mode === 'poster' ? '海报' : '正片') + '<small>X 切换世界</small>';
 }
 function fillEndScreen() {
-  const audience = Math.min(60, g.deaths + 1);
-  const rnd = mulberry(g.deaths * 31 + 7);
+  const isE = g.gameMode === 'endless';
+  const audience = isE
+    ? Math.min(60, 1 + Math.floor(endless.sceneCount / 6))
+    : Math.min(60, g.deaths + 1);
+  const rnd = mulberry((isE ? endless.sceneCount : g.deaths) * 31 + 7);
   const idx = new Set();
   while (idx.size < audience) idx.add(Math.floor(rnd() * 60));
   let html = '';
@@ -440,28 +595,53 @@ function fillEndScreen() {
     html += '</div>';
   }
   document.getElementById('seats').innerHTML = html;
+  document.getElementById('screenTxt').textContent = isE ? '排 片 结 束' : '散　场';
 
-  const got = tickets.filter(t => t.got).length;
   const mm = Math.floor(g.runTime / 60), ss = Math.floor(g.runTime % 60);
-  document.getElementById('endstats').innerHTML =
-    `本场票房 <b>¥${g.box.toFixed(1)}</b>（票根 ${got}/${tickets.length} 张）<br>` +
-    `观影人数 <b>${audience} 位</b>（1 位是你，其余 ${Math.max(0, audience - 1)} 位是没跑到结局的你）<br>` +
-    `放映时长 ${mm} 分 ${String(ss).padStart(2, '0')} 秒`;
+  if (isE) {
+    const best = Math.max(endless.sceneCount, parseInt(localStorage.getItem('nl_best_scenes') || '0', 10));
+    document.getElementById('endstats').innerHTML =
+      `本场票房 <b>¥${g.box.toFixed(1)}</b>（票根 ${g.ticketsGot} 张 · 峰值票价 ¥${(TICKET_PRICE * endless.mult).toFixed(1)}）<br>` +
+      `排片 <b>${endless.sceneCount} 场</b>（历史最佳 ${best} 场）· 存活 ${mm} 分 ${String(ss).padStart(2, '0')} 秒<br>` +
+      `观众 <b>${audience} 位</b>，排片多了，观众真的来了`;
+  } else {
+    document.getElementById('endstats').innerHTML =
+      `本场票房 <b>¥${g.box.toFixed(1)}</b>（票根 ${g.ticketsGot}/${tickets.length} 张）<br>` +
+      `观影人数 <b>${audience} 位</b>（1 位是你，其余 ${Math.max(0, audience - 1)} 位是没跑到结局的你）<br>` +
+      `放映时长 ${mm} 分 ${String(ss).padStart(2, '0')} 秒`;
+  }
 
-  const pct = Math.min(100, g.total / TARGET * 100);
-  document.getElementById('totalfill').style.width = pct + '%';
-  document.getElementById('totaltxt').textContent = g.total >= TARGET
-    ? `累计票房 ¥${g.total.toFixed(1)}，已超越《牛来》上映 10 天的 ¥7705 纪录！`
-    : `累计票房 ¥${g.total.toFixed(1)} / ¥7705，还差 ¥${(TARGET - g.total).toFixed(1)} 就能超过《牛来》首周纪录`;
+  // 累计进度条：7705 → 百万 → 千万，一路对着《牛来》的真实逆袭线
+  let barMax, barTxt;
+  if (g.total < TARGET) {
+    barMax = TARGET;
+    barTxt = `累计票房 ¥${g.total.toFixed(1)} / ¥7705，还差 ¥${(TARGET - g.total).toFixed(1)} 就能超过《牛来》首周纪录`;
+  } else if (g.total < 1000000) {
+    barMax = 1000000;
+    barTxt = `已超 ¥7705 纪录！下一站：累计破百万（¥${g.total.toFixed(1)} / ¥1,000,000）`;
+  } else if (g.total < 10000000) {
+    barMax = 10000000;
+    barTxt = `百万已破！下一站：逆袭一千万（¥${g.total.toFixed(1)} / ¥10,000,000）`;
+  } else {
+    barMax = g.total;
+    barTxt = `累计票房 ¥${g.total.toFixed(1)}，逆袭一千万达成，牛来封神`;
+  }
+  document.getElementById('totalfill').style.width = Math.min(100, g.total / barMax * 100) + '%';
+  document.getElementById('totaltxt').textContent = barTxt;
   document.getElementById('ach').style.display = g.ach ? 'block' : 'none';
 
-  const qa = (g.deaths * 7 + got * 3) % QUOTES.length;
+  const qa = (g.deaths * 7 + g.ticketsGot * 3 + (isE ? endless.sceneCount : 0)) % QUOTES.length;
   let qb = (qa + 3) % QUOTES.length; if (qb === qa) qb = (qb + 1) % QUOTES.length;
   document.getElementById('q1').textContent = QUOTES[qa];
   document.getElementById('q2').textContent = QUOTES[qb];
+  document.getElementById('modeSwapBtn').textContent = isE ? '回 剧 情' : '无 尽 模 式';
 }
-document.getElementById('startbtn').addEventListener('click', () => { ac(); startGame(); });
+document.getElementById('startbtn').addEventListener('click', () => { ac(); startStory(); });
+document.getElementById('endlessbtn').addEventListener('click', () => { ac(); startEndless(); });
 document.getElementById('againbtn').addEventListener('click', () => resetRun());
+document.getElementById('modeSwapBtn').addEventListener('click', () => {
+  g.gameMode === 'endless' ? startStory() : startEndless();
+});
 document.getElementById('resetTotal').addEventListener('click', () => {
   localStorage.removeItem('nl_total'); localStorage.removeItem('nl_ach');
   g.total = 0; g.ach = false; fillEndScreen(); updateHud();
@@ -501,7 +681,7 @@ function render() {
   for (const p of plats) g.mode === 'poster' ? drawPlatPoster(p) : drawPlatFilm(p);
   for (const s of spikes) g.mode === 'poster' ? drawSpikePoster(s) : drawSpikeFilm(s);
   for (const c of cps) drawCP(c);
-  drawGoal();
+  if (g.gameMode === 'story') drawGoal();
   for (const s of signs) drawSign(s);
   for (const t of tickets) if (!t.got) drawTicket(t);
   drawBird();
@@ -511,8 +691,31 @@ function render() {
   ctx.restore();
 
   if (g.mode === 'poster') posterOverlay(); else filmOverlay();
+  // 黑幕逼近警示（左缘红晕）
+  if (wall.active && g.state === 'play') {
+    const d = pl.x - wall.x;
+    if (d < 320) {
+      const a = Math.max(0, 1 - d / 320) * 0.4;
+      const grd = ctx.createLinearGradient(0, 0, 220, 0);
+      grd.addColorStop(0, `rgba(140,20,10,${a})`);
+      grd.addColorStop(1, 'rgba(140,20,10,0)');
+      ctx.fillStyle = grd; ctx.fillRect(0, 0, 220, H);
+    }
+  }
   drawSubtitle();
+  drawToast();
   drawTransition();
+}
+function drawToast() {
+  if (!g.toast) return;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, g.toast.t / 0.5);
+  ctx.translate(W / 2, 96); ctx.rotate(-0.03);
+  ctx.font = '20px "Kaiti SC","STKaiti",serif'; ctx.textAlign = 'center';
+  const w = ctx.measureText(g.toast.text).width + 44;
+  ctx.fillStyle = VERM; ctx.fillRect(-w / 2, -24, w, 40);
+  ctx.fillStyle = PAPER; ctx.fillText(g.toast.text, 0, 4);
+  ctx.restore();
 }
 
 // ---------------- 渲染：海报世界（水墨） ----------------
@@ -1036,10 +1239,11 @@ requestAnimationFrame(frame);
 
 // ---------------- 调试接口（供自动化测试用） ----------------
 window.game = {
-  g, pl, wall, bird, tickets, plats,
+  g, pl, wall, bird, tickets, plats, endless,
   tp(x, y) { pl.x = x; pl.y = y; pl.vx = 0; pl.vy = 0; },
   sw: switchMode,
-  start: startGame,
+  start: startStory,
+  startEndless,
   reset: resetRun,
   win() { pl.x = goal.x + 10; pl.y = goal.y + 40; },
   die,
