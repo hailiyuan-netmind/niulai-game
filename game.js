@@ -221,7 +221,12 @@ function solids() {
 
 // ---------------- 音效（WebAudio 手搓） ----------------
 let AC = null;
-function ac() { if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); return AC; }
+function ac() {
+  if (!AC) AC = new (window.AudioContext || window.webkitAudioContext)();
+  if (AC.state === 'suspended') AC.resume();
+  startMusic();
+  return AC;
+}
 function tone(f0, f1, dur, type, vol) {
   try {
     const a = ac(), o = a.createOscillator(), gn = a.createGain();
@@ -243,6 +248,61 @@ function splash(dur, vol, freq) {
     src.connect(f); f.connect(gn); gn.connect(a.destination); src.start();
   } catch (e) {}
 }
+// ---------------- 背景音乐：水墨风生成式小循环，只在海报世界响 ----------------
+// 五声音阶随机游走 + 偶发低音长音；正片世界刻意无配乐（此处应有配乐）
+const music = { started: false, muted: false, gain: null, nextT: 0, idx: 6, notes: 0, droneT: 0 };
+const SCALE = [0, 2, 4, 7, 9];   // 宫 商 角 徵 羽
+const ROOT = 196;                 // G3
+function degFreq(i) {
+  const oct = Math.floor(i / 5), st = SCALE[((i % 5) + 5) % 5] + oct * 12;
+  return ROOT * Math.pow(2, st / 12);
+}
+function pluck(freq, t, vel, dur) {
+  const a = AC;
+  const o = a.createOscillator(), o2 = a.createOscillator();
+  const gn = a.createGain(), g2 = a.createGain(), f = a.createBiquadFilter();
+  o.type = 'triangle'; o.frequency.value = freq;
+  o2.type = 'sine'; o2.frequency.value = freq * 2.005;   // 高八度微失谐的泛音，弦味
+  g2.gain.value = 0.25;
+  f.type = 'lowpass'; f.frequency.value = 1700;
+  gn.gain.setValueAtTime(vel, t);
+  gn.gain.exponentialRampToValueAtTime(0.0008, t + dur);
+  o.connect(f); o2.connect(g2); g2.connect(f); f.connect(gn); gn.connect(music.gain);
+  o.start(t); o2.start(t); o.stop(t + dur + 0.05); o2.stop(t + dur + 0.05);
+}
+function musicTarget() {
+  return (!music.muted && g.mode === 'poster') ? 0.14 : 0;
+}
+function startMusic() {
+  if (music.started || !AC) return;
+  music.started = true;
+  music.gain = AC.createGain();
+  music.gain.gain.value = 0;
+  music.gain.connect(AC.destination);
+  music.nextT = AC.currentTime + 0.3;
+  music.droneT = AC.currentTime + 2;
+  setInterval(() => {
+    if (!AC) return;
+    music.gain.gain.setTargetAtTime(musicTarget(), AC.currentTime, 0.12);
+    if (musicTarget() === 0) { music.nextT = Math.max(music.nextT, AC.currentTime + 0.25); return; }
+    while (music.nextT < AC.currentTime + 0.8) {
+      const steps = [-2, -1, -1, 1, 1, 2];   // 小步游走为主，偶尔跳进
+      music.idx = Math.max(0, Math.min(11, music.idx + steps[Math.floor(Math.random() * steps.length)]));
+      const dur = [0.45, 0.9, 0.9, 1.35, 1.8][Math.floor(Math.random() * 5)];
+      if (Math.random() > 0.22) {            // 两成概率留白
+        pluck(degFreq(music.idx), music.nextT, 0.22, 2.2);
+        music.notes++;
+        if (Math.random() < 0.18) pluck(degFreq(music.idx - 5), music.nextT + 0.02, 0.1, 2.6);
+      }
+      music.nextT += dur;
+    }
+    if (AC.currentTime > music.droneT) {     // 每隔十来秒一记低音长音
+      pluck(ROOT / 2, AC.currentTime + 0.05, 0.12, 5);
+      music.droneT = AC.currentTime + 9 + Math.random() * 6;
+    }
+  }, 180);
+}
+
 const sfx = {
   jump: () => tone(300, 540, 0.12, 'square', 0.06),
   switch: () => splash(0.22, 0.16, 900),
@@ -261,6 +321,7 @@ window.addEventListener('keydown', e => {
   ac();
   if (g.state === 'menu' && (e.code === 'Enter' || e.code === 'Space')) { startGame(); return; }
   if (g.state === 'end' && e.code === 'Enter') { resetRun(); return; }
+  if (e.code === 'KeyM') { music.muted = !music.muted; return; }
   if (e.code === 'KeyP' || e.code === 'Escape') {
     if (g.state === 'play') g.state = 'pause';
     else if (g.state === 'pause') g.state = 'play';
@@ -1316,7 +1377,7 @@ requestAnimationFrame(frame);
 
 // ---------------- 调试接口（供自动化测试用） ----------------
 window.game = {
-  g, pl, wall, bird, tickets, plats, endless,
+  g, pl, wall, bird, tickets, plats, endless, music,
   tp(x, y) { pl.x = x; pl.y = y; pl.vx = 0; pl.vy = 0; },
   sw: switchMode,
   start: startStory,
