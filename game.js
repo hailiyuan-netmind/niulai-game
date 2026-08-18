@@ -113,6 +113,7 @@ function buildStory() {
   cps.push({ x: 3060, y: 500, got: false }, { x: 5300, y: 500, got: false });
   // 正片字幕（棒读）
   [[500, '。。。加油。牛来。'],
+   [1430, '他。站起来了。'],
    [2550, '牛来。你要，学会，勇敢。'],
    [4450, '（此处应有配乐。）'],
    [5750, '生死。就是，跑得快一点。'],
@@ -136,6 +137,7 @@ const QUOTES = [
 const ENDLESS_SUBS = [
   '。。。跑。牛来。', '排片。不能。消失。', '（观众。正在。入场。）',
   '牛来。别回头。', '这。就是。生死。', '（此处。仍然。没有。配乐。）',
+  '站着。跑。更快。',
 ];
 
 // ---------------- 无尽模式：程序生成 ----------------
@@ -1092,51 +1094,76 @@ function drawPlayer() {
     ctx.fillStyle = PAPER;
     ctx.beginPath(); ctx.arc(15.5, -8.5, 1.5, 0, 7); ctx.fill();
   } else {
-    // 手搓小牛：方块拼的，六帧动画，脚底打滑
+    // 正片小牛：照观众屏摄考据复刻，直立行走的橙毛牛，六帧动画，脚底打滑
     const moving = Math.abs(pl.vx) > 20;
     const air = !pl.onGround;
     const o = pl.pose ? 4 : -4;
-    ctx.strokeStyle = '#26282b'; ctx.lineWidth = 1;
-    // 红披风（正片版：一块硬邦邦的红布片，两帧动画）
+    const BODY = '#e0a13d', BODY_D = '#c08428', LINE = '#26282b';
+    ctx.strokeStyle = LINE; ctx.lineWidth = 1;
+    // 红披风（一块硬邦邦的红布片，两帧动画）
     ctx.fillStyle = '#c0392b';
     ctx.beginPath();
-    ctx.moveTo(-13, -12);
-    ctx.lineTo(-25 + o / 2, -8);
-    ctx.lineTo(-25 + o / 2, 6);
-    ctx.lineTo(-13, 0);
+    ctx.moveTo(-8, -12);
+    ctx.lineTo(-20 + o / 2, -8);
+    ctx.lineTo(-20 + o / 2, 8);
+    ctx.lineTo(-8, 2);
     ctx.closePath(); ctx.fill(); ctx.stroke();
-    // 腿（四根方柱）
-    for (let i = 0; i < 4; i++) {
-      const lx = -12 + i * 7;
-      let dx2 = 0;
-      if (air) dx2 = i < 2 ? -5 : 5;
-      else if (moving) dx2 = (i % 2 ? o : -o);
-      ctx.fillStyle = '#8f8474';
-      ctx.fillRect(lx + dx2, 2, 5, air ? 9 : 12);
-      ctx.strokeRect(lx + dx2 + 0.5, 2.5, 5, air ? 9 : 12);
+    // 后臂（人类式手臂，走路时摆）
+    const armSw = air ? -8 : (moving ? -o : 0);
+    ctx.fillStyle = BODY_D;
+    ctx.fillRect(-12 + armSw * 0.4, air ? -14 : -8, 5, 12);
+    ctx.strokeRect(-11.5 + armSw * 0.4, (air ? -14 : -8) + 0.5, 4, 11);
+    // 腿（两条，直立）
+    for (let i = 0; i < 2; i++) {
+      const lx = i === 0 ? -7 : 1;
+      let dx2 = 0, lh = 12;
+      if (air) { dx2 = i === 0 ? -3 : 3; lh = 9; }
+      else if (moving) dx2 = i === 0 ? o : -o;
+      ctx.fillStyle = BODY;
+      ctx.fillRect(lx + dx2, 2, 6, lh);
+      ctx.strokeRect(lx + dx2 + 0.5, 2.5, 5, lh - 1);
     }
-    // 身（假 3D 盒子）
-    ctx.fillStyle = '#c0b29a';
-    ctx.beginPath(); ctx.moveTo(-16, -10); ctx.lineTo(-11, -14); ctx.lineTo(19, -14); ctx.lineTo(14, -10); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#a89a82';
-    ctx.beginPath(); ctx.moveTo(14, -10); ctx.lineTo(19, -14); ctx.lineTo(19, 0); ctx.lineTo(14, 4); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = '#b3a58d';
-    ctx.fillRect(-16, -10, 30, 14);
-    ctx.strokeRect(-15.5, -9.5, 29, 13);
-    // 头（盒子）
-    ctx.fillStyle = '#b3a58d';
-    ctx.fillRect(9, -22, 13, 11);
-    ctx.strokeRect(9.5, -21.5, 12, 10);
-    // 鼻（粉色方块）
+    // 尾（一小截绳子）
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.moveTo(-11, -4); ctx.quadraticCurveTo(-16, -2 + o * 0.3, -15, 4); ctx.stroke();
+    ctx.lineWidth = 1;
+    // 身（橙毛方桶）
+    ctx.fillStyle = BODY;
+    ctx.fillRect(-12, -12, 22, 16);
+    ctx.strokeRect(-11.5, -11.5, 21, 15);
+    // 浅色肚皮
+    ctx.fillStyle = '#ecc989';
+    ctx.fillRect(-6, -8, 12, 10);
+    ctx.strokeRect(-5.5, -7.5, 11, 9);
+    // 前臂
+    ctx.fillStyle = BODY;
+    ctx.fillRect(6 - armSw * 0.4, air ? -16 : -8, 5, 12);
+    ctx.strokeRect(6.5 - armSw * 0.4, (air ? -16 : -8) + 0.5, 4, 11);
+    // 大方头，脸朝前
+    ctx.fillStyle = BODY;
+    ctx.fillRect(0, -28, 21, 17);
+    ctx.strokeRect(0.5, -27.5, 20, 16);
+    // 耳（两侧支棱）
+    ctx.beginPath(); ctx.moveTo(0, -24); ctx.lineTo(-6, -27); ctx.lineTo(0, -20); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(21, -24); ctx.lineTo(27, -27); ctx.lineTo(21, -20); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // 一对小灰角
+    ctx.fillStyle = '#cfc8b8';
+    ctx.beginPath(); ctx.moveTo(3, -28); ctx.lineTo(1, -33); ctx.lineTo(7, -28); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(14, -28); ctx.lineTo(18, -33); ctx.lineTo(18, -28); ctx.closePath(); ctx.fill(); ctx.stroke();
+    // 灰白大口鼻（半张人脸似的）
+    ctx.fillStyle = '#e8ded2';
+    ctx.fillRect(8, -19, 15, 9);
+    ctx.strokeRect(8.5, -18.5, 14, 8);
+    // 粉鼻孔
     ctx.fillStyle = '#d8a8a0';
-    ctx.fillRect(18, -16, 5, 5);
-    ctx.strokeRect(18.5, -15.5, 4, 4);
-    // 角（灰三角）
-    ctx.fillStyle = '#8f959b';
-    ctx.beginPath(); ctx.moveTo(10, -22); ctx.lineTo(8, -27); ctx.lineTo(13, -22); ctx.closePath(); ctx.fill(); ctx.stroke();
-    // 眼（一个像素点，无神）
-    ctx.fillStyle = '#26282b';
-    ctx.fillRect(15, -19, 2, 2);
+    ctx.fillRect(17, -17, 2, 2); ctx.fillRect(20, -17, 2, 2);
+    // 眼（小而无神，靠得近）
+    ctx.fillStyle = LINE;
+    ctx.fillRect(9, -23, 2, 2); ctx.fillRect(15, -23, 2, 2);
+    // 蓝灰浓眉（灵魂所在）
+    ctx.strokeStyle = '#3e4f63'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(7, -25); ctx.lineTo(12, -26); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(14, -26); ctx.lineTo(19, -25); ctx.stroke();
   }
   ctx.restore();
 }
