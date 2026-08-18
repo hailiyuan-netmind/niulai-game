@@ -116,8 +116,9 @@ const QUOTES = [
   '看完我沉默了，影院也沉默了，毕竟只有我。',
   '别人手搓火箭，这里手搓电影，都是勇气。',
   '海报值一张票钱，正片值一段人生阅历。',
-  '牛没来，但我来了。',
+  '牛来了，我也来了，我们都有光明的前途。',
   '特效炸裂，裂缝里全是诚意。',
+  '从《牛申克的救赎》一路刷到这，二创浓度超标。',
 ];
 
 // ---------------- 工具 ----------------
@@ -517,10 +518,11 @@ function render() {
 // ---------------- 渲染：海报世界（水墨） ----------------
 function renderPosterBG() {
   ctx.fillStyle = PAPER; ctx.fillRect(0, 0, W, H);
-  // 远山三层
+  // 远山三层：照官方海报，墨色与青绿交替
+  const MTN = ['rgba(70,72,66,0.12)', 'rgba(74,112,96,0.17)', 'rgba(52,86,78,0.22)'];
   for (let L = 0; L < 3; L++) {
     const par = 0.12 + L * 0.1, base = 300 + L * 55;
-    ctx.fillStyle = `rgba(70,72,66,${0.10 + L * 0.055})`;
+    ctx.fillStyle = MTN[L];
     ctx.beginPath(); ctx.moveTo(0, H);
     for (let x = 0; x <= W + 40; x += 40) {
       const wx = x + g.cam * par;
@@ -529,6 +531,19 @@ function renderPosterBG() {
     }
     ctx.lineTo(W, H); ctx.closePath(); ctx.fill();
   }
+  // 蜿蜒青绿溪流（海报同款）
+  ctx.beginPath();
+  for (let x = -20; x <= W + 20; x += 24) {
+    const wx = x + g.cam * 0.5;
+    ctx.lineTo(x, 462 + Math.sin(wx * 0.0042) * 15 + Math.sin(wx * 0.013) * 4);
+  }
+  for (let x = W + 20; x >= -20; x -= 24) {
+    const wx = x + g.cam * 0.5;
+    ctx.lineTo(x, 486 + Math.sin(wx * 0.0042 + 0.5) * 13);
+  }
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(84,134,116,0.30)'; ctx.fill();
+  ctx.strokeStyle = 'rgba(50,72,64,0.25)'; ctx.lineWidth = 1.4; ctx.stroke();
   // 朱色淡日
   ctx.globalAlpha = 0.5;
   ctx.fillStyle = '#d86a4a';
@@ -790,16 +805,17 @@ function drawBird() {
   const bx = bird.x, by = bird.y;
   ctx.save();
   if (g.mode === 'poster') {
+    // 朱红云雀（官方海报同款配色）
     const flap = Math.sin(bird.t * 9) * 0.9;
-    ctx.strokeStyle = '#1c1a17'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
+    ctx.strokeStyle = '#c2512f'; ctx.lineWidth = 2.4; ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(bx - 14, by - flap * 8);
     ctx.quadraticCurveTo(bx - 5, by - 6 - flap * 5, bx, by);
     ctx.quadraticCurveTo(bx + 5, by - 6 + flap * 5, bx + 14, by + flap * 8);
     ctx.stroke();
-    ctx.fillStyle = '#1c1a17';
+    ctx.fillStyle = '#c0432a';
     ctx.beginPath(); ctx.ellipse(bx, by + 2, 5.5, 3.4, 0, 0, 7); ctx.fill();
-    ctx.fillStyle = VERM;
+    ctx.fillStyle = '#6b2015';
     ctx.beginPath(); ctx.arc(bx + 4.6, by - 0.5, 1.6, 0, 7); ctx.fill();
   } else {
     const up = pl.pose === 0;
@@ -830,9 +846,18 @@ function drawPlayer() {
   ctx.scale(pl.face, 1);
 
   if (g.mode === 'poster') {
-    // 水墨小牛：一笔身子，四笔腿，一点朱砂围巾
+    // 水墨小牛：一笔身子，四笔腿，官方海报同款红披风
     const gliding = !pl.onGround;
     ctx.rotate(gliding ? -0.12 : 0);
+    // 红披风（先画，垫在身后，飘）
+    const flut = Math.sin(pl.animT * 9) * 3 + (gliding ? 5 : 0);
+    ctx.fillStyle = VERM;
+    ctx.beginPath();
+    ctx.moveTo(8, -11);
+    ctx.quadraticCurveTo(-8, -16 - flut, -22 - flut, -6 - flut * 0.8);
+    ctx.quadraticCurveTo(-26 - flut * 1.3, 2 - flut * 0.4, -16 - flut * 0.6, 6);
+    ctx.quadraticCurveTo(-4, 8, 8, -2);
+    ctx.closePath(); ctx.fill();
     // 腿
     ctx.strokeStyle = INK; ctx.lineWidth = 3; ctx.lineCap = 'round';
     for (let i = 0; i < 4; i++) {
@@ -860,8 +885,8 @@ function drawPlayer() {
     ctx.beginPath(); ctx.moveTo(-15, -3);
     ctx.quadraticCurveTo(-21, -6 + Math.sin(pl.animT * 8) * 3, -23, 1 + Math.sin(pl.animT * 8) * 2);
     ctx.stroke();
-    // 朱砂围巾 + 眼
-    ctx.fillStyle = VERM; ctx.fillRect(6, -4, 6, 7);
+    // 披风领结 + 眼
+    ctx.fillStyle = VERM; ctx.fillRect(5, -10, 6, 6);
     ctx.fillStyle = PAPER;
     ctx.beginPath(); ctx.arc(15.5, -8.5, 1.5, 0, 7); ctx.fill();
   } else {
@@ -870,6 +895,14 @@ function drawPlayer() {
     const air = !pl.onGround;
     const o = pl.pose ? 4 : -4;
     ctx.strokeStyle = '#26282b'; ctx.lineWidth = 1;
+    // 红披风（正片版：一块硬邦邦的红布片，两帧动画）
+    ctx.fillStyle = '#c0392b';
+    ctx.beginPath();
+    ctx.moveTo(-13, -12);
+    ctx.lineTo(-25 + o / 2, -8);
+    ctx.lineTo(-25 + o / 2, 6);
+    ctx.lineTo(-13, 0);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
     // 腿（四根方柱）
     for (let i = 0; i < 4; i++) {
       const lx = -12 + i * 7;
